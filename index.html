@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Career Copilot — Resume Analyzer</title>
+<style>
+/* ══════════════════════════════════════════
+   🎨 CUSTOMIZE YOUR BRAND COLORS HERE
+   Change these 2 values to match your brand
+   ═══════════════════════════════════════════ */
+:root {
+  --primary: #0f172a;      /* Dark navy (header, text) */
+  --accent: #ea580c;       /* Orange (buttons, highlights) */
+  --accent-hover: #c2410c; /* Darker orange on hover */
+  --bg: #f8fafc;           /* Page background */
+  --card: #ffffff;         /* Card background */
+  --text: #1e293b;         /* Main text */
+  --muted: #64748b;        /* Secondary text */
+  --success: #16a34a;      /* Green for good scores */
+  --warning: #f59e0b;      /* Amber for warnings */
+  --danger: #dc2626;       /* Red for errors */
+  --border: #e2e8f0;       /* Borders */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Header */
+header {
+  background: linear-gradient(135deg, var(--primary) 0%, #1e293b 100%);
+  color: white;
+  padding: 40px 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  opacity: 0.15;
+  border-radius: 50%;
+}
+header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+  position: relative;
+}
+header h1 span { color: var(--accent); }
+header p {
+  font-size: 16px;
+  opacity: 0.85;
+  max-width: 500px;
+  margin: 0 auto;
+  position: relative;
+}
+header .badge {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-top: 12px;
+  letter-spacing: 0.5px;
+  position: relative;
+}
+
+/* Container */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+/* Input Section */
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+@media (max-width: 768px) {
+  .input-grid { grid-template-columns: 1fr; }
+  header h1 { font-size: 28px; }
+}
+
+.input-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.input-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.input-card h3 .icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.input-card:nth-child(1) h3 .icon { background: #fef3c7; }
+.input-card:nth-child(2) h3 .icon { background: #dbeafe; }
+
+textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s;
+  background: #fafafa;
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: white;
+}
+textarea::placeholder { color: #94a3b8; }
+
+/* Analyze Button */
+.analyze-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+.analyze-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.4);
+}
+.analyze-btn:active { transform: translateY(0); }
+.analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+}
+.loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error */
+.error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Results */
+.results { margin-top: 30px; }
+.result-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  animation: slideUp 0.4s ease both;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+.result-card:nth-child(2) { animation-delay: 0.1s; }
+.result-card:nth-child(3) { animation-delay: 0.2s; }
+.result-card:nth-child(4) { animation-delay: 0.3s; }
+.result-card:nth-child(5) { animation-delay: 0.4s; }
+
+.result-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Score Card */
+.score-card {
+  text-align: center;
+  padding: 30px 24px;
+}
+.score-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  position: relative;
+}
+.score-circle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(var(--accent) var(--score-deg, 0deg), var(--border) 0deg);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.score-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+.score-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  font-weight: 600;
+}
+.score-message {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Keywords */
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.keyword {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #fde68a;
+}
+
+/* Lists */
+.insight-list { list-style: none; }
+.insight-list li {
+  padding: 10px 0 10px 28px;
+  position: relative;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.insight-list li:last-child { border-bottom: none; }
+.insight-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 20px;
+  height: 20px;
+  background: #dcfce7;
+  color: var(--success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+.improvement-list li::before {
+  content: '';
+  background: #fef3c7;
+  font-size: 10px;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 30px 20px;
+  color: var(--muted);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+footer a:hover { text-decoration: underline; }
+
+/* Tips box */
+.tips-box {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  font-size: 13px;
+  color: #0c4a6e;
+}
+.tips-box strong { color: #075985; }
+</style>
+</head>
+<body>
+
+<header>
+  <!-- ✏️ CUSTOMIZE: Change your app name here -->
+  <h1>AI Career <span>Copilot</span></h1>
+  <p>Paste your resume and a job description. Get instant, AI-powered feedback to land your dream job.</p>
+  <div class="badge">POWERED BY GEMINI AI</div>
+</header>
+
+<div class="container">
+
+  <!-- Input Section -->
+  <div class="input-grid">
+    <div class="input-card">
+      <h3><span class="icon">📄</span> Your Resume</h3>
+      <textarea id="resume" placeholder="Paste your full resume text here...&#10;&#10;Include:&#10;- Your name and contact&#10;- Work experience&#10;- Skills&#10;- Education&#10;- Projects"></textarea>
+    </div>
+    <div class="input-card">
+      <h3><span class="icon"></span> Job Description</h3>
+      <textarea id="jobDesc" placeholder="Paste the job description here...&#10;&#10;Include:&#10;- Job title&#10;- Required skills&#10;- Responsibilities&#10;- Qualifications"></textarea>
+    </div>
+  </div>
+
+  <button id="analyzeBtn" class="analyze-btn" onclick="analyzeResume()">
+    <span>🚀</span> Analyze Resume
+  </button>
+  <button id="improveBtn" class="analyze-btn" onclick="improveResume()" style="margin-top: 12px; background: #6c63ff;">
+    ✨ Improve My Resume
+  </button>
+  
+  <div id="improvedResume" class="results"></div>
+  <!-- Cover Letter Feature -->
+<button
+id="coverLetterBtn"
+class="analyze-btn"
+onclick="generateCoverLetter()"
+style="margin-top: 12px; background: #198754;"
+>
+✉️ Generate Cover Letter
+</button>
+
+<div id="coverLetterResult" class="results"></div>
+<!-- Interview Question Generator -->
+<button
+  id="interviewBtn"
+  class="analyze-btn"
+  onclick="generateInterviewQuestions()"
+  style="margin-top: 12px; background: #e67e22;"
+>
+  🎯 Generate Interview Questions
+</button>
+
+<div id="interviewResult" class="results"></div>
+
+  <div class="tips-box" style="margin-top: 20px;">
+    <strong> Pro Tip:</strong> For best results, paste the <em>full</em> resume text (not just a summary) and the <em>complete</em> job description. The AI will match keywords, skills, and experience.
+  </div>
+
+  <!-- Results Section -->
+  <div id="results" class="results"></div>
+
+</div>
+
+<footer>
+  <!-- ✏️ CUSTOMIZE: Change footer text to your name -->
+  <p>Built by <strong>[Your Name]</strong> · ApnoAI AI/ML Intern · October 2026</p>
+  <p style="margin-top: 6px;">Powered by Google Gemini API · <a href="https://apnoai.com">apnoai.com</a></p>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   🔑 STEP 1: PASTE YOUR GEMINI API KEY BELOW
+   Get free key from: https://aistudio.google.com
+   ═══════════════════════════════════════════════════ */
+ 
+
+/* ═══════════════════════════════════════════════════
+   🧠 STEP 2: CUSTOMIZE YOUR SYSTEM PROMPT
+   This is the "brain" of your AI. Edit it to change
+   how the AI analyzes resumes.
+   
+   Try these variations:
+   - Option A: General career coach (default)
+   - Option B: Tech recruiter (focus on coding skills)
+   - Option C: Fresh grad advisor (focus on internships)
+   ═══════════════════════════════════════════════════ */
+const SYSTEM_PROMPT= `You are an expert career coach, Data Science recruiter, and ATS resume specialist.
+
+Your task is to analyze the candidate's resume against the provided job description and give specific, honest, actionable feedback.
+
+Return ONLY a valid JSON object with exactly these fields:
+{
+  "ats_score": 0,
+  "summary": "A concise 2-3 sentence assessment of the resume's relevance to the job description.",
+  "strengths": ["Strength 1", "Strength 2", "Strength 3", "Strength 4"],
+  "missing_keywords": ["Keyword 1", "Keyword 2", "Keyword 3", "Keyword 4", "Keyword 5"],
+  "improvements": ["Improvement 1", "Improvement 2", "Improvement 3"]
+}
+
+Rules:
+- Give an ATS score from 0 to 100 based on the actual match between the resume and job description.
+- Be specific, honest, and data-driven.
+- For Data Science and Data Analytics roles, evaluate Python, SQL, Pandas, NumPy, data cleaning, exploratory data analysis, data visualization, statistics, machine learning, and model evaluation when relevant to the job description.
+- For other roles, evaluate the skills and requirements actually mentioned in the job description.
+- Mention relevant projects and explain how well they demonstrate the required skills.
+- Recommend measurable project results only when supported by the resume or project evidence.
+- Never invent experience, qualifications, skills, project results, dataset sizes, or model performance metrics.
+- List only relevant keywords that appear in the job description but are missing from the resume.
+- Suggest practical improvements the candidate can realistically make.
+- If information is missing, identify it as a gap rather than assuming it.
+- Keep every strength and improvement concise and useful.
+- Return valid JSON only. Do not include Markdown fences or any text outside the JSON object.`;
+
+/* ═══════════════════════════════════════════════════
+   ⚙️ CORE LOGIC — Do not edit unless you know JS
+   ═══════════════════════════════════════════════════ */
+
+async function analyzeResume() {
+  const resume = document.getElementById('resume').value.trim();
+  const jobDesc = document.getElementById('jobDesc').value.trim();
+  const resultsDiv = document.getElementById('results');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+
+  // Validation
+  if (!resume || !jobDesc) {
+    resultsDiv.innerHTML = `
+      <div class="error-box">
+        <span style="font-size: 20px;">⚠️</span>
+        <div>
+          <strong>Please fill in both fields</strong><br>
+          <span style="font-size: 13px;">Paste your resume AND the job description to get AI feedback.</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (resume.length < 50 || jobDesc.length < 50) {
+    resultsDiv.innerHTML = `
+      <div class="error-box">
+        <span style="font-size: 20px;">⚠️</span>
+        <div>
+          <strong>Content too short</strong><br>
+          <span style="font-size: 13px;">Please paste the full resume and complete job description for accurate analysis.</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (GEMINI_API_KEY === "YOUR_API_KEY_HERE") {
+    resultsDiv.innerHTML = `
+      <div class="error-box">
+        <span style="font-size: 20px;">🔑</span>
+        <div>
+          <strong>API Key Missing</strong><br>
+          <span style="font-size: 13px;">Open this file in VS Code and replace <code>YOUR_API_KEY_HERE</code> with your Gemini API key. Get a free key from <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a></span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Show loading
+  analyzeBtn.disabled = true;
+  analyzeBtn.innerHTML = '<span class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></span> AI is analyzing...';
+  resultsDiv.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p style="font-weight: 600;">Analyzing your resume against the job description...</p>
+      <p style="font-size: 13px; margin-top: 8px;">This usually takes 5-10 seconds</p>
+    </div>`;
+
+  try {
+    const userPrompt = `Resume:\n${resume}\n\nJob Description:\n${jobDesc}\n\nProvide your analysis as a JSON object with the exact fields specified.`;
+
+    const response = await fetch('/api/generate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    feature: 'analyze',
+    resume,
+    jobDesc
+  })
+});
+
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.error || 'Resume analysis failed.');
+}
+
+const aiResponse = data.result;
+
+if (!aiResponse) {
+  throw new Error('Empty response from AI');
+}
+
+const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+
+if (!jsonMatch) {
+  throw new Error('AI did not return valid JSON');
+}
+
+const analysis = JSON.parse(jsonMatch[0]);
+
+if (
+  analysis.ats_score == null ||
+  !Array.isArray(analysis.strengths) ||
+  !Array.isArray(analysis.improvements)
+) {
+  throw new Error('AI response missing required fields');
+}
+
+displayResults(analysis);
+
+
+  } catch (error) {
+    resultsDiv.innerHTML = `
+      <div class="error-box">
+        <span style="font-size: 20px;">❌</span>
+        <div>
+          <strong>Analysis Failed</strong><br>
+          <span style="font-size: 13px;">${error.message}<br><br>
+          Common fixes:<br>
+          • Check your API key is correct<br>
+          • Wait 1 minute and try again (rate limit)<br>
+          • Make sure resume + job description are detailed</span>
+        </div>
+      </div>`;
+  } finally {
+    analyzeBtn.disabled = false;
+    analyzeBtn.innerHTML = '<span>🚀</span> Analyze Resume';
+  }
+}
+async function improveResume() {
+  const resume = document.getElementById('resume').value.trim();
+  const jobDesc = document.getElementById('jobDesc').value.trim();
+  const output = document.getElementById('improvedResume');
+  const button = document.getElementById('improveBtn');
+
+  if (!resume || !jobDesc) {
+    output.innerHTML = '<p>Please enter both your resume and job description first.</p>';
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = '✨ Improving...';
+  output.innerHTML = '<p>AI is improving your resume. Please wait...</p>';
+
+  try {
+    const prompt = `
+You are an expert resume writer for job applicants.
+
+Improve the candidate's resume for the given job description.
+- Preserve the candidate's real education, skills, projects, and experience.
+- Do not invent achievements, experience, metrics, or skills.
+- Improve wording, clarity, and professional presentation.
+- Highlight relevant skills and projects.
+- If a detail is missing, do not make it up.
+- Return the improved resume as plain text with clear headings.
+
+RESUME:
+${resume}
+
+JOB DESCRIPTION:
+${jobDesc}
+`;
+
+const response = await fetch('/api/generate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    feature: 'improve',
+    resume,
+    jobDesc
+  })
+});
+
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.error || 'Resume improvement failed.');
+}
+
+const improvedText = data.result;
+
+if (!improvedText) {
+  throw new Error('AI returned an empty response.');
+}
+
+    const heading = document.createElement('h3');
+    heading.textContent = '✨ Your Improved Resume';
+
+    const content = document.createElement('pre');
+    content.style.whiteSpace = 'pre-wrap';
+    content.style.overflowWrap = 'anywhere';
+    content.style.padding = '16px';
+    content.style.background = '#f7f7fb';
+    content.style.borderRadius = '8px';
+    content.textContent = improvedText;
+
+    output.replaceChildren(heading, content);
+
+  } catch (error) {
+    output.textContent = `Resume improvement failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = '✨ Improve My Resume';
+  }
+}
+async function generateCoverLetter() {
+  const resume = document.getElementById('resume').value.trim();
+  const jobDesc = document.getElementById('jobDesc').value.trim();
+  const output = document.getElementById('coverLetterResult');
+  const button = document.getElementById('coverLetterBtn');
+
+  if (!resume || !jobDesc) {
+    output.textContent =
+      'Please enter both your resume and job description first.';
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = '✉️ Generating...';
+  output.textContent = 'Generating your cover letter. Please wait...';
+
+  try {
+    const prompt = `
+You are a professional career coach.
+
+Write a tailored, professional cover letter using the candidate's resume
+and the job description below.
+
+Rules:
+- Do not invent experience, achievements, skills, or qualifications.
+- Highlight only relevant information supported by the resume.
+- Use a professional and natural tone.
+- Keep it concise, around 250-350 words.
+- Do not invent a company name or recruiter's name.
+- Use a placeholder such as [Hiring Manager] when necessary.
+- Return only the cover letter.
+
+RESUME:
+${resume}
+
+JOB DESCRIPTION:
+${jobDesc}
+`;
+
+const response = await fetch('/api/generate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    feature: 'coverLetter',
+    resume,
+    jobDesc
+  })
+});
+
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.error || 'Cover letter generation failed.');
+}
+
+const coverLetter = data.result;
+
+if (!coverLetter) {
+  throw new Error('AI returned an empty response.');
+}
+
+    const heading = document.createElement('h3');
+    heading.textContent = '✉️ Your Cover Letter';
+
+    const content = document.createElement('pre');
+    content.textContent = coverLetter;
+    content.style.whiteSpace = 'pre-wrap';
+    content.style.overflowWrap = 'anywhere';
+    content.style.padding = '16px';
+    content.style.background = '#f7f7fb';
+    content.style.borderRadius = '8px';
+
+    const copyButton = document.createElement('button');
+    copyButton.textContent = '📋 Copy Cover Letter';
+    copyButton.className = 'analyze-btn';
+    copyButton.style.marginTop = '10px';
+
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(coverLetter);
+        copyButton.textContent = '✅ Copied!';
+      } catch {
+        copyButton.textContent =
+          'Please select and copy the cover letter manually.';
+      }
+    });
+
+    output.replaceChildren(heading, content, copyButton);
+
+  } catch (error) {
+    output.textContent =
+      `Cover letter generation failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = '✉️ Generate Cover Letter';
+  }
+}
+async function generateInterviewQuestions() {
+  const resume = document.getElementById('resume').value.trim();
+  const jobDesc = document.getElementById('jobDesc').value.trim();
+  const output = document.getElementById('interviewResult');
+  const button = document.getElementById('interviewBtn');
+
+  if (!resume || !jobDesc) {
+    output.textContent =
+      'Please enter both your resume and job description first.';
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = '🎯 Generating Questions...';
+  output.textContent = 'Preparing your interview questions...';
+
+  try {
+    const prompt = `
+You are an expert technical interviewer and career coach.
+
+Generate 12 interview questions based on the candidate's resume
+and the job description.
+
+Include:
+1. Four technical questions relevant to the job.
+2. Four questions about the candidate's projects and practical skills.
+3. Four HR and behavioral questions.
+
+Rules:
+- Personalize questions using the actual resume.
+- Do not assume the candidate has skills or experience not mentioned.
+- Keep questions suitable for an internship candidate.
+- Number every question.
+- Group questions under clear headings.
+- Include a short sample answer outline after each question.
+- For project questions, use projects actually mentioned in the resume.
+
+RESUME:
+${resume}
+
+JOB DESCRIPTION:
+${jobDesc}
+`;
+
+const response = await fetch('/api/generate', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    feature: 'interview',
+    resume,
+    jobDesc
+  })
+});
+
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(
+    data.error || 'Interview question generation failed.'
+  );
+}
+
+const questions = data.result;
+
+if (!questions) {
+  throw new Error('AI returned an empty response.');
+}
+      
+
+    const heading = document.createElement('h3');
+    heading.textContent = '🎯 Your Personalized Interview Questions';
+
+    const content = document.createElement('pre');
+    content.textContent = questions;
+    content.style.whiteSpace = 'pre-wrap';
+    content.style.overflowWrap = 'anywhere';
+    content.style.padding = '16px';
+    content.style.background = '#f7f7fb';
+    content.style.borderRadius = '8px';
+
+    const copyButton = document.createElement('button');
+    copyButton.textContent = '📋 Copy Questions';
+    copyButton.className = 'analyze-btn';
+    copyButton.style.marginTop = '10px';
+
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(questions);
+        copyButton.textContent = '✅ Copied!';
+      } catch {
+        copyButton.textContent =
+          'Please select and copy the questions manually.';
+      }
+    });
+
+    output.replaceChildren(heading, content, copyButton);
+
+  } catch (error) {
+    output.textContent =
+      `Interview question generation failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = '🎯 Generate Interview Questions';
+  }
+}
+
+function displayResults(analysis) {
+  const resultsDiv = document.getElementById('results');
+  const score = Math.min(100, Math.max(0, analysis.ats_score));
+  const scoreDeg = (score / 100) * 360;
+  
+  let scoreColor = 'var(--danger)';
+  let scoreMessage = 'Low match — major revisions needed';
+  if (score >= 80) { scoreColor = 'var(--success)'; scoreMessage = 'Excellent match! Your resume is well-optimized.'; }
+  else if (score >= 60) { scoreColor = 'var(--warning)'; scoreMessage = 'Good match — some improvements can help.'; }
+  else if (score >= 40) { scoreMessage = 'Fair match — consider significant updates.'; }
+
+  resultsDiv.innerHTML = `
+    <!-- Score Card -->
+    <div class="result-card score-card">
+      <h4 style="justify-content: center;">🎯 ATS Match Score</h4>
+      <div class="score-circle" style="--score-deg: ${scoreDeg}deg;">
+        <div class="score-number" style="color: ${scoreColor};">${score}</div>
+        <div class="score-label">out of 100</div>
+      </div>
+      <p class="score-message">${scoreMessage}</p>
+    </div>
+
+    <!-- Summary -->
+    <div class="result-card">
+      <h4>📝 AI Summary</h4>
+      <p style="font-size: 15px; line-height: 1.6; color: var(--text);">${analysis.summary || 'No summary provided.'}</p>
+    </div>
+
+    <!-- Strengths -->
+    <div class="result-card">
+      <h4>✅ What Your Resume Does Well</h4>
+      <ul class="insight-list">
+        ${(analysis.strengths || []).map(s => `<li>${s}</li>`).join('')}
+      </ul>
+    </div>
+
+    <!-- Missing Keywords -->
+    <div class="result-card">
+      <h4> Missing Keywords (Add These!)</h4>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 12px;">These keywords from the job description are missing in your resume. Add them naturally to improve your ATS score.</p>
+      <div class="keyword-list">
+        ${(analysis.missing_keywords || []).map(k => `<span class="keyword">${k}</span>`).join('')}
+      </div>
+    </div>
+
+    <!-- Improvements -->
+    <div class="result-card">
+      <h4>💡 Recommended Improvements</h4>
+      <ul class="insight-list improvement-list">
+        ${(analysis.improvements || []).map(i => `<li>${i}</li>`).join('')}
+      </ul>
+    </div>
+
+    <!-- Action Box -->
+    <div class="tips-box" style="background: #f0fdf4; border-color: #bbf7d0; color: #14532d;">
+      <strong>🎯 Next Steps:</strong> Update your resume with the missing keywords and improvements above, then run the analysis again to see your score improve!
+    </div>
+  `;
+
+  // Scroll to results
+  resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+
+</body>
+</html>

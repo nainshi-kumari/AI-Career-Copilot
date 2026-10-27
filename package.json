@@ -1,0 +1,15 @@
+{
+    "name": "ai-career-copilot",
+    "version": "1.0.0",
+    "private": true,
+    "description": "AI-powered resume analysis and career assistance tool",
+    "scripts": {
+        "dev": "python3 -m http.server 8000"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.24.1"
+    },
+    "devDependencies": {
+        "vercel": "^41.0.0"
+    }
+}
